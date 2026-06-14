@@ -1,0 +1,49 @@
+# ERP backend package metadata and dependency manifest.
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "flyingfoods-erp"
+version = "0.1.0"
+description = "Flying Foods Restaurant & Inventory Management System backend"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "Django>=5.0,<6.0",
+  "djangorestframework>=3.15",
+  "djangorestframework-simplejwt[crypto]>=5.3",
+  "django-filter>=24.2",
+  "django-redis>=5.4",
+  "django-cors-headers>=4.4",
+  "channels[daphne]>=4.1",
+  "channels-redis>=4.2",
+  "celery[redis]>=5.4",
+  "psycopg[binary]>=3.2",
+  "dj-database-url>=2.2",
+  "python-decouple>=3.8",
+  "weasyprint>=62.0",
+  "openpyxl>=3.1",
+  "uvicorn[standard]>=0.30",
+  "cryptography>=42.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3",
+  "pytest-django>=4.8",
+  "factory_boy>=3.3",
+  "pytest-asyncio>=0.23",
+]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.dev"
+pythonpath = ["."]
+addopts = "-q"
+testpaths = ["apps"]
+
+[tool.setuptools]
+py-modules = []
+
+[tool.setuptools.packages.find]
+include = ["apps*", "config*"]
