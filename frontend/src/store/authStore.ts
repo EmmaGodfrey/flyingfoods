@@ -1,44 +1,63 @@
+/**
+ * Auth store. The access token lives only in memory (never localStorage) and is
+ * mirrored into the API client. On boot we try a silent refresh against the
+ * httpOnly refresh cookie so a reload keeps the session without re-login.
+ */
+
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 
-import type { TokenPair } from "../types";
+import { api, setAccessToken, setAuthLostHandler } from "../lib/apiClient";
+import type { AuthUser } from "../types";
 
-type AuthState = {
-  accessToken: string | null;
-  refreshToken: string | null;
-  hasHydrated: boolean;
-  setHasHydrated: (value: boolean) => void;
-  setTokens: (tokens: Pick<TokenPair, "access_token" | "refresh_token">) => void;
-  clearTokens: () => void;
-};
+interface AuthState {
+  user: AuthUser | null;
+  status: "loading" | "authenticated" | "anonymous";
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  bootstrap: () => Promise<void>;
+}
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set) => ({
-      accessToken: null,
-      refreshToken: null,
-      hasHydrated: false,
-      setHasHydrated: (value) => set({ hasHydrated: value }),
-      setTokens: (tokens) =>
-        set({
-          accessToken: tokens.access_token,
-          refreshToken: tokens.refresh_token,
-        }),
-      clearTokens: () =>
-        set({
-          accessToken: null,
-          refreshToken: null,
-        }),
-    }),
-    {
-      name: "erp-auth", // localStorage key
-      partialize: (state) => ({
-        accessToken: state.accessToken,
-        refreshToken: state.refreshToken,
-      }),
-      onRehydrateStorage: () => (state) => {
-        state?.setHasHydrated(true);
-      },
-    },
-  ),
-);
+export const useAuthStore = create<AuthState>((set) => ({
+  user: null,
+  status: "loading",
+
+  login: async (email, password) => {
+    const data = await api.authPost<{ access: string; user: AuthUser }>("/auth/login/", {
+      email,
+      password,
+    });
+    setAccessToken(data.access);
+    set({ user: data.user, status: "authenticated" });
+  },
+
+  logout: async () => {
+    try {
+      await api.post("/auth/logout/");
+    } catch {
+      // Logging out is best-effort; clear local state regardless.
+    }
+    setAccessToken(null);
+    set({ user: null, status: "anonymous" });
+  },
+
+  bootstrap: async () => {
+    const fresh = await api.refresh();
+    if (!fresh) {
+      set({ status: "anonymous" });
+      return;
+    }
+    try {
+      const user = await api.get<AuthUser>("/auth/me/");
+      set({ user, status: "authenticated" });
+    } catch {
+      setAccessToken(null);
+      set({ status: "anonymous" });
+    }
+  },
+}));
+
+// When a refresh fails mid-session, drop to anonymous so routes redirect.
+setAuthLostHandler(() => {
+  setAccessToken(null);
+  useAuthStore.setState({ user: null, status: "anonymous" });
+});
