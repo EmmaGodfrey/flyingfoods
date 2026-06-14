@@ -1,19 +1,16 @@
-import {
-  ClipboardList,
-  PackageSearch,
-  Settings,
-  ShoppingCart,
-  Trash2,
-} from "lucide-react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
-import { Placeholder } from "../components/Placeholder";
+import { AdminPage } from "../features/admin/AdminPage";
 import { ApprovalsPage } from "../features/approvals/ApprovalsPage";
 import { LoginPage } from "../features/auth/LoginPage";
+import { IssuesPage } from "../features/issues/IssuesPage";
 import { KitchenBoard } from "../features/kitchen/KitchenBoard";
+import { MenuPage } from "../features/menu/MenuPage";
+import { ProcurementPage } from "../features/procurement/ProcurementPage";
 import { ReportsPage } from "../features/reports/ReportsPage";
 import { StockPage } from "../features/stock/StockPage";
 import { WaiterBoard } from "../features/waiter/WaiterBoard";
+import { WastagePage } from "../features/wastage/WastagePage";
 import { useAuthStore } from "../store/authStore";
 import { AppShell } from "./AppShell";
 import { landingPathForRole } from "./navigation";
@@ -38,13 +35,13 @@ export function AppRouter(): JSX.Element {
         {/* Standard sections live inside the app shell. */}
         <Route element={<AppShell />}>
           <Route path="/stock" element={<StockPage />} />
-          <Route path="/issues" element={<Placeholder icon={ClipboardList} title="Issues & transfers" description="Daily issues to the kitchen, Tue/Thu unit orders, and inter-unit transfers." />} />
-          <Route path="/procurement" element={<Placeholder icon={ShoppingCart} title="Procurement" description="Budgets, purchase orders, goods received, and three-way invoice matching." />} />
-          <Route path="/wastage" element={<Placeholder icon={Trash2} title="Wastage & stock-take" description="Log breakage and spoilage, run stock-takes, and review variance." />} />
-          <Route path="/menu" element={<Placeholder icon={PackageSearch} title="Menu & recipes" description="Versioned recipes with a draft-review-publish workflow." />} />
+          <Route path="/issues" element={<IssuesPage />} />
+          <Route path="/procurement" element={<ProcurementPage />} />
+          <Route path="/wastage" element={<WastagePage />} />
+          <Route path="/menu" element={<MenuPage />} />
           <Route path="/approvals" element={<ApprovalsPage />} />
           <Route path="/reports" element={<ReportsPage />} />
-          <Route path="/admin" element={<Placeholder icon={Settings} title="Administration" description="Users, products, suppliers, thresholds, and integration settings." />} />
+          <Route path="/admin" element={<AdminPage />} />
         </Route>
 
         <Route path="/" element={<RoleLanding />} />
