@@ -113,6 +113,9 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "apps.core.pagination.DefaultPageNumberPagination",
     "PAGE_SIZE": 25,
     "EXCEPTION_HANDLER": "apps.core.exceptions.envelope_exception_handler",
+    # Reports read ?format=json|xlsx|pdf themselves; stop DRF from treating
+    # `format` as a renderer suffix (which would 404 on xlsx/pdf).
+    "URL_FORMAT_OVERRIDE": None,
 }
 
 SIMPLE_JWT = {
