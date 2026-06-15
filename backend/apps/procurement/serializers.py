@@ -1,5 +1,7 @@
 """Procurement serializers: budgets, purchase orders, GRNs, invoices, and matches."""
 
+from decimal import Decimal
+
 from rest_framework import serializers
 
 from apps.procurement.models import (
@@ -40,6 +42,9 @@ class PurchaseBudgetSerializer(serializers.ModelSerializer):
     """Read serializer for PurchaseBudget with nested lines."""
 
     lines = BudgetLineSerializer(many=True, read_only=True)
+    total = serializers.DecimalField(
+        source="total_estimated", max_digits=12, decimal_places=2, read_only=True
+    )
 
     class Meta:
         model = PurchaseBudget
@@ -48,6 +53,7 @@ class PurchaseBudgetSerializer(serializers.ModelSerializer):
             "requester",
             "status",
             "total_estimated",
+            "total",
             "lines",
             "created_at",
             "updated_at",
@@ -64,9 +70,14 @@ class PurchaseBudgetCreateSerializer(serializers.ModelSerializer):
         fields = ["id", "total_estimated", "lines"]
 
     def create(self, validated_data: dict) -> PurchaseBudget:
-        """Create a PurchaseBudget with its nested BudgetLines."""
+        """Create a PurchaseBudget with its nested BudgetLines, summing the total."""
         lines_data = validated_data.pop("lines")
         requester = self.context["request"].user
+        total = sum(
+            (line["qty"] * line["est_unit_cost"] for line in lines_data),
+            Decimal("0"),
+        )
+        validated_data["total_estimated"] = total
         budget = PurchaseBudget.objects.create(requester=requester, **validated_data)
         BudgetLine.objects.bulk_create(
             [BudgetLine(budget=budget, **line) for line in lines_data]
@@ -82,9 +93,19 @@ class PurchaseBudgetCreateSerializer(serializers.ModelSerializer):
 class POLineSerializer(serializers.ModelSerializer):
     """Read serializer for a single POLine."""
 
+    product_name = serializers.CharField(source="product.name", read_only=True)
+
     class Meta:
         model = POLine
-        fields = ["id", "product", "qty", "unit_price", "fulfilled_qty", "created_at"]
+        fields = [
+            "id",
+            "product",
+            "product_name",
+            "qty",
+            "unit_price",
+            "fulfilled_qty",
+            "created_at",
+        ]
 
 
 class POLineCreateSerializer(serializers.ModelSerializer):
@@ -99,6 +120,9 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
     """Read serializer for PurchaseOrder with nested lines."""
 
     lines = POLineSerializer(many=True, read_only=True)
+    supplier_name = serializers.CharField(source="supplier.name", read_only=True)
+    reference = serializers.CharField(source="po_number", read_only=True)
+    total = serializers.SerializerMethodField()
 
     class Meta:
         model = PurchaseOrder
@@ -106,13 +130,21 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
             "id",
             "budget",
             "supplier",
+            "supplier_name",
             "po_number",
+            "reference",
             "status",
+            "total",
             "pdf_file",
             "lines",
             "created_at",
             "updated_at",
         ]
+
+    def get_total(self, obj: PurchaseOrder) -> str:
+        """Sum line value (qty x unit price) for display."""
+        total = sum((line.qty * line.unit_price for line in obj.lines.all()), Decimal("0"))
+        return f"{total:.2f}"
 
 
 class PurchaseOrderCreateSerializer(serializers.ModelSerializer):

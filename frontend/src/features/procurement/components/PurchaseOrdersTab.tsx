@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { PackageCheck, Plus, Send, Trash2 } from "lucide-react";
+import { FileText, PackageCheck, Plus, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { ApiError } from "../../../lib/apiClient";
@@ -9,6 +9,7 @@ import {
   procurementApi,
   type CreatePurchaseOrderBody,
   type GrnLine,
+  type InvoiceMatch,
   type PurchaseOrder,
 } from "../api";
 
@@ -25,6 +26,7 @@ export function PurchaseOrdersTab(): JSX.Element {
   const qc = useQueryClient();
   const [newOpen, setNewOpen] = useState(false);
   const [receiving, setReceiving] = useState<PurchaseOrder | null>(null);
+  const [invoicing, setInvoicing] = useState<PurchaseOrder | null>(null);
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["purchase-orders"],
@@ -62,6 +64,9 @@ export function PurchaseOrdersTab(): JSX.Element {
           <button className="btn btn-success" onClick={() => setReceiving(r)}>
             <PackageCheck size={15} /> Receive (GRN)
           </button>
+          <button className="btn btn-ghost" onClick={() => setInvoicing(r)}>
+            <FileText size={15} /> Invoice
+          </button>
         </div>
       ),
     },
@@ -79,7 +84,8 @@ export function PurchaseOrdersTab(): JSX.Element {
       <DataTable columns={columns} rows={orders} rowKey={(r) => r.id} loading={isLoading} empty="No purchase orders yet." />
 
       <NewPurchaseOrderDialog open={newOpen} onClose={() => setNewOpen(false)} />
-      {receiving && <GrnDialog poId={receiving.id} onClose={() => setReceiving(null)} />}
+      {receiving && <GrnDialog po={receiving} onClose={() => setReceiving(null)} />}
+      {invoicing && <InvoiceMatchDialog po={invoicing} onClose={() => setInvoicing(null)} />}
     </div>
   );
 }
@@ -190,19 +196,14 @@ function NewPurchaseOrderDialog({ open, onClose }: { open: boolean; onClose: () 
   );
 }
 
-function GrnDialog({ poId, onClose }: { poId: string; onClose: () => void }): JSX.Element {
+function GrnDialog({ po, onClose }: { po: PurchaseOrder; onClose: () => void }): JSX.Element {
   const qc = useQueryClient();
   const [received, setReceived] = useState<Record<string, { qty: string; cost: string }>>({});
-
-  const { data: po, isLoading } = useQuery({
-    queryKey: ["purchase-order", poId],
-    queryFn: () => procurementApi.getPurchaseOrder(poId),
-  });
 
   const set = (lineId: string, patch: Partial<{ qty: string; cost: string }>): void =>
     setReceived((prev) => ({ ...prev, [lineId]: { qty: prev[lineId]?.qty ?? "", cost: prev[lineId]?.cost ?? "", ...patch } }));
 
-  const grnLines: GrnLine[] = (po?.lines ?? [])
+  const grnLines: GrnLine[] = (po.lines ?? [])
     .map((line) => {
       const entry = received[line.id];
       if (!entry || Number(entry.qty) <= 0) return null;
@@ -211,10 +212,9 @@ function GrnDialog({ poId, onClose }: { poId: string; onClose: () => void }): JS
     .filter((line): line is GrnLine => line !== null);
 
   const create = useMutation({
-    mutationFn: () => procurementApi.createGrn(poId, grnLines),
+    mutationFn: () => procurementApi.createGrn(po.id, grnLines),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["purchase-orders"] });
-      void qc.invalidateQueries({ queryKey: ["purchase-order", poId] });
       void qc.invalidateQueries({ queryKey: ["stock"] });
       onClose();
       toast.success("Goods received");
@@ -224,11 +224,11 @@ function GrnDialog({ poId, onClose }: { poId: string; onClose: () => void }): JS
 
   return (
     <Dialog open onClose={onClose} title="Receive goods (GRN)">
-      {isLoading ? (
-        <div className="skeleton" style={{ height: 80 }} />
+      {(po.lines ?? []).length === 0 ? (
+        <p className="muted">This purchase order has no lines to receive.</p>
       ) : (
         <div className="form-grid">
-          {(po?.lines ?? []).map((line) => (
+          {(po.lines ?? []).map((line) => (
             <div className="form-row" key={line.id} style={{ gridTemplateColumns: "2fr 1fr 1fr", alignItems: "end" }}>
               <label className="field">
                 <span>{line.product_name ?? line.product}</span>
@@ -257,8 +257,6 @@ function GrnDialog({ poId, onClose }: { poId: string; onClose: () => void }): JS
         </div>
       )}
 
-      {/* TODO: 3-way invoice matching (POST /purchase-orders/{id}/invoices/) as a follow-up screen. */}
-
       <div className="dialog-actions">
         <button className="btn btn-ghost" onClick={onClose}>
           Cancel
@@ -266,6 +264,142 @@ function GrnDialog({ poId, onClose }: { poId: string; onClose: () => void }): JS
         <button className="btn btn-success" disabled={grnLines.length === 0 || create.isPending} onClick={() => create.mutate()}>
           Record GRN
         </button>
+      </div>
+    </Dialog>
+  );
+}
+
+/** Human label for each 3-way match check key. */
+const MATCH_CHECK_LABELS: Record<string, string> = {
+  po_value: "Purchase order value",
+  grn_value: "Goods received value",
+};
+
+/**
+ * Record a supplier invoice against a PO and show the 3-way match result.
+ * On a discrepancy the matched amounts are broken down, and the match can be
+ * resolved, disputed, or escalated without leaving the dialog.
+ */
+function InvoiceMatchDialog({ po, onClose }: { po: PurchaseOrder; onClose: () => void }): JSX.Element {
+  const qc = useQueryClient();
+  const [invoiceRef, setInvoiceRef] = useState("");
+  const [amount, setAmount] = useState("");
+  const [match, setMatch] = useState<InvoiceMatch | null>(null);
+
+  const submit = useMutation({
+    mutationFn: () => procurementApi.createInvoice(po.id, { invoice_ref: invoiceRef, amount: Number(amount) }),
+    onSuccess: (result) => {
+      setMatch(result);
+      void qc.invalidateQueries({ queryKey: ["purchase-orders"] });
+      if (result.status === "MATCHED") {
+        toast.success("Invoice matched — PO, goods, and invoice agree");
+      } else {
+        toast.warning("Invoice recorded with discrepancies");
+      }
+    },
+    onError: (error) => toast.error(error instanceof ApiError ? error.message : "Could not record invoice"),
+  });
+
+  const act = useMutation({
+    mutationFn: (action: "resolve" | "dispute" | "escalate") => {
+      if (!match) throw new Error("No match to act on");
+      if (action === "resolve") return procurementApi.resolveMatch(match.id);
+      if (action === "dispute") return procurementApi.disputeMatch(match.id);
+      return procurementApi.escalateMatch(match.id);
+    },
+    onSuccess: (result) => {
+      setMatch(result);
+      toast.success(`Match ${result.status.toLowerCase()}`);
+    },
+    onError: (error) => toast.error(error instanceof ApiError ? error.message : "Could not update match"),
+  });
+
+  const canSubmit = invoiceRef.trim().length > 0 && Number(amount) > 0;
+  const discrepancies = match ? Object.entries(match.discrepancies) : [];
+
+  return (
+    <Dialog open onClose={onClose} title={`Invoice — ${po.reference ?? po.po_number ?? po.id.slice(0, 8)}`}>
+      {!match ? (
+        <div className="form-grid">
+          <label className="field">
+            <span>Supplier invoice reference</span>
+            <input value={invoiceRef} onChange={(e) => setInvoiceRef(e.target.value)} placeholder="INV-0001" />
+          </label>
+          <label className="field">
+            <span>Invoice amount</span>
+            <input type="number" min={0} step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} />
+          </label>
+          <p className="muted">
+            Submitting runs a 3-way match against the purchase order value and the goods actually received.
+          </p>
+        </div>
+      ) : (
+        <div className="form-grid">
+          <div className="form-row" style={{ alignItems: "center", justifyContent: "space-between" }}>
+            <div>
+              <div className="strong mono">{match.invoice.invoice_ref}</div>
+              <div className="muted">Invoice amount {match.invoice.amount}</div>
+            </div>
+            <StatusBadge status={match.status} />
+          </div>
+
+          {discrepancies.length === 0 ? (
+            <p className="muted">No discrepancies — the invoice agrees with the order and the goods received.</p>
+          ) : (
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Check</th>
+                  <th style={{ textAlign: "right" }}>Expected</th>
+                  <th style={{ textAlign: "right" }}>Invoiced</th>
+                </tr>
+              </thead>
+              <tbody>
+                {discrepancies.map(([key, value]) => (
+                  <tr key={key}>
+                    <td>{MATCH_CHECK_LABELS[key] ?? key}</td>
+                    <td className="mono" style={{ textAlign: "right" }}>{value.expected}</td>
+                    <td className="mono" style={{ textAlign: "right" }}>{value.actual}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      <div className="dialog-actions">
+        {!match ? (
+          <>
+            <button className="btn btn-ghost" onClick={onClose}>
+              Cancel
+            </button>
+            <button className="btn btn-primary" disabled={!canSubmit || submit.isPending} onClick={() => submit.mutate()}>
+              Run 3-way match
+            </button>
+          </>
+        ) : (
+          <>
+            {(match.status === "DISCREPANCY" || match.status === "DISPUTED") && (
+              <button className="btn btn-ghost" disabled={act.isPending} onClick={() => act.mutate("escalate")}>
+                Escalate
+              </button>
+            )}
+            {match.status === "DISCREPANCY" && (
+              <button className="btn btn-ghost" disabled={act.isPending} onClick={() => act.mutate("dispute")}>
+                Dispute
+              </button>
+            )}
+            {match.status !== "MATCHED" && match.status !== "RESOLVED" && (
+              <button className="btn btn-success" disabled={act.isPending} onClick={() => act.mutate("resolve")}>
+                Resolve
+              </button>
+            )}
+            <button className="btn btn-primary" onClick={onClose}>
+              Done
+            </button>
+          </>
+        )}
       </div>
     </Dialog>
   );
