@@ -115,6 +115,8 @@ export const api = {
   patch: <T>(path: string, body?: unknown) => request<T>(path, { method: "PATCH", body }),
   put: <T>(path: string, body?: unknown) => request<T>(path, { method: "PUT", body }),
   del: <T>(path: string) => request<T>(path, { method: "DELETE" }),
+  /** GET returning the raw Response (file downloads), with auth + 401 retry. */
+  getRaw: (path: string) => request<Response>(path, { raw: true }),
   /** POST without the 401 retry — used by login/refresh themselves. */
   authPost: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "POST", body, noRetry: true }),

@@ -75,13 +75,17 @@ class IssueNoteSerializer(serializers.ModelSerializer):
     """Issue note with nested lines (read)."""
 
     lines = IssueNoteLineSerializer(many=True, read_only=True)
+    source_name = serializers.CharField(source="source.name", read_only=True)
+    destination_name = serializers.CharField(source="destination.name", read_only=True)
 
     class Meta:
         model = IssueNote
         fields = [
             "id",
             "source",
+            "source_name",
             "destination",
+            "destination_name",
             "status",
             "off_schedule_reason",
             "created_at",
@@ -127,13 +131,17 @@ class TransferSerializer(serializers.ModelSerializer):
     """Transfer with nested lines (read)."""
 
     lines = TransferLineSerializer(many=True, read_only=True)
+    source_name = serializers.CharField(source="source.name", read_only=True)
+    destination_name = serializers.CharField(source="destination.name", read_only=True)
 
     class Meta:
         model = Transfer
         fields = [
             "id",
             "source",
+            "source_name",
             "destination",
+            "destination_name",
             "status",
             "total_value",
             "created_at",
@@ -169,16 +177,25 @@ class TransferCreateSerializer(serializers.Serializer):
 class StockTakeLineSerializer(serializers.ModelSerializer):
     """Count line with computed variance."""
 
+    product_name = serializers.CharField(source="product.name", read_only=True)
     variance = serializers.DecimalField(
-        source="variance",
         max_digits=12,
         decimal_places=3,
         read_only=True,
+        allow_null=True,
     )
 
     class Meta:
         model = StockTakeLine
-        fields = ["id", "product", "system_qty", "counted_qty", "value", "variance"]
+        fields = [
+            "id",
+            "product",
+            "product_name",
+            "system_qty",
+            "counted_qty",
+            "value",
+            "variance",
+        ]
 
 
 class StockTakeSerializer(serializers.ModelSerializer):

@@ -96,4 +96,3 @@ class LocationListView(generics.ListAPIView):
     serializer_class = LocationSerializer
     queryset = Location.objects.order_by("name")
     permission_classes = [IsAuthenticated]
-    pagination_class = None

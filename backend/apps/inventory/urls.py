@@ -8,6 +8,7 @@ from apps.inventory.views import (
     StockBalanceListView,
     StockMovementListView,
     StockTakeCreateView,
+    StockTakeDetailView,
     StockTakeLinesUpdateView,
     StockTakePostView,
     TransferCreateView,
@@ -22,6 +23,7 @@ urlpatterns = [
     path("transfers/", TransferCreateView.as_view(), name="transfers"),
     path("transfers/<uuid:pk>/post/", TransferPostView.as_view(), name="transfers-post"),
     path("stock-takes/", StockTakeCreateView.as_view(), name="stock-takes"),
+    path("stock-takes/<uuid:pk>/", StockTakeDetailView.as_view(), name="stock-takes-detail"),
     path("stock-takes/<uuid:pk>/lines/", StockTakeLinesUpdateView.as_view(), name="stock-takes-lines"),
     path("stock-takes/<uuid:pk>/post/", StockTakePostView.as_view(), name="stock-takes-post"),
 ]

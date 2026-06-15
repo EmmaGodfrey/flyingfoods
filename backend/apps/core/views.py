@@ -140,15 +140,44 @@ class IntegrationHealthView(APIView):
     permission_classes = [IsAdmin]
 
     def get(self, request: Request) -> Response:
-        """Return failure counts for POS ingestion and Pastel sync.
+        """Return a health card per integration for the admin panel.
 
         Returns:
-            JSON with keys ``pos`` and ``pastel``, each containing a
-            ``failed_count`` integer.
+            A JSON list of objects with ``key``, ``label``, ``status``,
+            ``detail``, ``failure_count``, and ``last_run_at``.
         """
-        pos_data = self._pos_health()
-        pastel_data = self._pastel_health()
-        return Response({"pos": pos_data, "pastel": pastel_data})
+        pos = self._pos_health()
+        pastel = self._pastel_health()
+
+        pos_failures = pos["flagged_count"] + pos["failed_count"]
+        if pos["failed_count"]:
+            pos_status = "FAILED"
+        elif pos["flagged_count"]:
+            pos_status = "DEGRADED"
+        else:
+            pos_status = "OK"
+
+        pastel_status = "FAILED" if pastel["failed_count"] else "OK"
+
+        cards = [
+            {
+                "key": "pos",
+                "label": "POS Ingestion",
+                "status": pos_status,
+                "detail": f"{pos['flagged_count']} flagged, {pos['failed_count']} failed",
+                "failure_count": pos_failures,
+                "last_run_at": None,
+            },
+            {
+                "key": "pastel",
+                "label": "Pastel Sync",
+                "status": pastel_status,
+                "detail": f"{pastel['failed_count']} failed in outbox",
+                "failure_count": pastel["failed_count"],
+                "last_run_at": None,
+            },
+        ]
+        return Response(cards)
 
     def _pos_health(self) -> dict:
         """Return POS ingest failure counts.

@@ -44,10 +44,7 @@ export function ReportsPage(): JSX.Element {
 
   const onExport = async (): Promise<void> => {
     try {
-      const base = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
-      const url = `${base}/api${active.path}?format=xlsx`;
-      const res = await fetch(url, { credentials: "include" });
-      if (!res.ok) throw new Error();
+      const res = await api.getRaw(`${active.path}?format=xlsx`);
       const blob = await res.blob();
       const href = URL.createObjectURL(blob);
       const a = document.createElement("a");

@@ -87,11 +87,24 @@ class StockMovementListView(generics.ListAPIView):
 # ---------------------------------------------------------------------------
 
 
-class IssueNoteCreateView(generics.CreateAPIView):
-    """POST /issues/ — create a draft issue note."""
+class IssueNoteCreateView(generics.ListCreateAPIView):
+    """GET /issues/ — list issue notes. POST /issues/ — create a draft issue note."""
 
-    permission_classes = [IsIssuer]
     serializer_class = IssueNoteSerializer
+
+    def get_permissions(self) -> list[Any]:
+        """Stock viewers may list; only issuers may create."""
+        if self.request.method == "GET":
+            return [IsStockViewer()]
+        return [IsIssuer()]
+
+    def get_queryset(self):
+        """Return issue notes with related locations and lines, newest first."""
+        return (
+            IssueNote.objects.select_related("source", "destination")
+            .prefetch_related("lines")
+            .order_by("-created_at")
+        )
 
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Validate input, resolve locations, delegate to service, return serialized note."""
@@ -141,11 +154,24 @@ class IssueNotePostView(APIView):
 # ---------------------------------------------------------------------------
 
 
-class TransferCreateView(generics.CreateAPIView):
-    """POST /transfers/ — create a draft transfer with lines."""
+class TransferCreateView(generics.ListCreateAPIView):
+    """GET /transfers/ — list transfers. POST /transfers/ — create a draft transfer."""
 
-    permission_classes = [IsIssuer]
     serializer_class = TransferSerializer
+
+    def get_permissions(self) -> list[Any]:
+        """Stock viewers may list; only issuers may create."""
+        if self.request.method == "GET":
+            return [IsStockViewer()]
+        return [IsIssuer()]
+
+    def get_queryset(self):
+        """Return transfers with related locations and lines, newest first."""
+        return (
+            Transfer.objects.select_related("source", "destination")
+            .prefetch_related("lines")
+            .order_by("-created_at")
+        )
 
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Validate input, create Transfer + TransferLines (DRAFT), return serialized."""
@@ -219,6 +245,17 @@ class StockTakeCreateView(generics.CreateAPIView):
             StockTakeSerializer(st_with_lines).data,
             status=status.HTTP_201_CREATED,
         )
+
+
+class StockTakeDetailView(generics.RetrieveAPIView):
+    """GET /stock-takes/{id}/ — fetch a stock take with its count lines."""
+
+    permission_classes = [IsStorekeeper]
+    serializer_class = StockTakeSerializer
+
+    def get_queryset(self):
+        """Return stock takes with their lines prefetched."""
+        return StockTake.objects.prefetch_related("lines")
 
 
 class StockTakeLinesUpdateView(APIView):
