@@ -37,7 +37,8 @@ services:
       sh -c "python manage.py migrate --noinput &&
              uvicorn config.asgi:application --host 0.0.0.0 --port 8000"
     ports:
-      - "8000:8000"
+      # Host 8001 -> container 8000. Host 8000 is taken by local Apache (XAMPP).
+      - "8001:8000"
     env_file: ./backend/.env
     depends_on:
       postgres:
