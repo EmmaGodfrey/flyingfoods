@@ -61,9 +61,25 @@ class ApprovalSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_subject_label(self, obj: Approval) -> str:
-        """Human description of the document under review (its __str__)."""
+        """Friendly description of the document under review.
+
+        Detected by attribute so core need not import the feature models:
+        wastage shows the product and quantity, transfers/issues show the
+        locations, budgets show their line count; anything else falls back to
+        the model's own string form.
+        """
         subject = obj.subject
-        return str(subject) if subject is not None else ""
+        if subject is None:
+            return ""
+        if hasattr(subject, "entry_type") and hasattr(subject, "product"):
+            qty = str(subject.qty).rstrip("0").rstrip(".") if subject.qty is not None else ""
+            return f"{str(subject.entry_type).title()} · {subject.product.name} ×{qty}"
+        if hasattr(subject, "source") and hasattr(subject, "destination"):
+            return f"{subject.source.name} → {subject.destination.name}"
+        if hasattr(subject, "total_estimated"):
+            count = subject.lines.count()
+            return f"Purchase budget · {count} item{'s' if count != 1 else ''}"
+        return str(subject)
 
     def get_subject_value(self, obj: Approval) -> str | None:
         """Monetary value of the document, read from whichever total it carries."""
