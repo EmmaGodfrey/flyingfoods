@@ -1,8 +1,10 @@
 import { useMemo } from "react";
-import { ConciergeBell, LogOut } from "lucide-react";
+import { Link } from "react-router-dom";
+import { ConciergeBell, LayoutGrid, LogOut } from "lucide-react";
 import { AnimatePresence } from "motion/react";
 
 import { ConnPill } from "../../components/ConnPill";
+import { shellLandingForRole } from "../../app/navigation";
 import { useTicker } from "../../lib/useTicker";
 import { useAuthStore } from "../../store/authStore";
 import { useOrderSocket } from "../kitchen/hooks/useOrderSocket";
@@ -25,6 +27,8 @@ export function WaiterBoard(): JSX.Element {
   const { serve, returnOrder } = useServiceActions();
   const queued = useActionQueue((s) => s.pending.length);
   const logout = useAuthStore((state) => state.logout);
+  const user = useAuthStore((state) => state.user);
+  const homePath = user ? shellLandingForRole(user.role) : null;
   useQueueFlusher();
 
   useTicker(1000);
@@ -40,6 +44,11 @@ export function WaiterBoard(): JSX.Element {
         </h1>
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
           <ConnPill state={conn} queued={queued} />
+          {homePath && (
+            <Link className="btn btn-ghost" to={homePath}>
+              <LayoutGrid size={16} /> Back to app
+            </Link>
+          )}
           <button className="btn btn-ghost" onClick={() => void logout()}>
             <LogOut size={16} /> Sign out
           </button>

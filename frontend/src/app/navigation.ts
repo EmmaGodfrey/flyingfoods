@@ -50,12 +50,40 @@ export const NAV_SECTIONS: NavSection[] = [
 
 void ALL;
 
+/** The full-bleed live boards that render outside the app shell (no sidebar). */
+const BOARD_PATHS = new Set(["/kitchen", "/waiter"]);
+
+/**
+ * Where each role lands after login. Board-primary roles (chef, waiter) land
+ * on their live board; everyone else lands on a shell page with the sidebar,
+ * so managers and admins are never stranded on a chromeless board.
+ */
+const ROLE_LANDING: Record<Role, string> = {
+  CHEF: "/kitchen",
+  WAITER: "/waiter",
+  STOREKEEPER: "/stock",
+  RECEIVING_OFFICER: "/procurement",
+  UNIT_ISSUER: "/issues",
+  RESTAURANT_ISSUER: "/issues",
+  MANAGER: "/reports",
+  ADMIN: "/admin",
+};
+
 /** Sections visible to a role, in nav order. */
 export function sectionsForRole(role: Role): NavSection[] {
   return NAV_SECTIONS.filter((section) => section.roles.includes(role));
 }
 
-/** The landing path for a role (its first permitted section). */
+/** The landing path for a role; falls back to its first permitted section. */
 export function landingPathForRole(role: Role): string {
-  return sectionsForRole(role)[0]?.path ?? "/kitchen";
+  return ROLE_LANDING[role] ?? sectionsForRole(role)[0]?.path ?? "/kitchen";
+}
+
+/**
+ * The first shell (non-board) section a role can reach, or null if the role
+ * only has live boards. Used by the boards' "Back to app" control.
+ */
+export function shellLandingForRole(role: Role): string | null {
+  const shell = sectionsForRole(role).find((section) => !BOARD_PATHS.has(section.path));
+  return shell?.path ?? null;
 }

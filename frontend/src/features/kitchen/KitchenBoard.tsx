@@ -1,8 +1,10 @@
 import { useMemo } from "react";
-import { ChefHat, LogOut } from "lucide-react";
+import { Link } from "react-router-dom";
+import { ChefHat, LayoutGrid, LogOut } from "lucide-react";
 import { AnimatePresence } from "motion/react";
 
 import { ConnPill } from "../../components/ConnPill";
+import { shellLandingForRole } from "../../app/navigation";
 import { useTicker } from "../../lib/useTicker";
 import { useAuthStore } from "../../store/authStore";
 import { OrderTicket } from "./components/OrderTicket";
@@ -17,6 +19,8 @@ export function KitchenBoard(): JSX.Element {
   const conn = useOrderSocket("/ws/kitchen/", ["kitchen", "orders"]);
   const { start, ready } = useOrderTransition();
   const logout = useAuthStore((state) => state.logout);
+  const user = useAuthStore((state) => state.user);
+  const homePath = user ? shellLandingForRole(user.role) : null;
 
   // One ticking clock for the whole board; each card derives its own age.
   useTicker(1000);
@@ -33,6 +37,11 @@ export function KitchenBoard(): JSX.Element {
         </h1>
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
           <ConnPill state={conn} />
+          {homePath && (
+            <Link className="btn btn-ghost" to={homePath}>
+              <LayoutGrid size={16} /> Back to app
+            </Link>
+          )}
           <button className="btn btn-ghost" onClick={() => void logout()}>
             <LogOut size={16} /> Sign out
           </button>
