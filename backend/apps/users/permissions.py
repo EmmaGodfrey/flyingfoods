@@ -59,11 +59,16 @@ class IsReceivingOfficer(BasePermission):
 
 
 class IsIssuer(BasePermission):
-    """Restaurant and Unit Issuers (and Admins)."""
+    """Storekeeper, Restaurant and Unit Issuers (and Admins) — may issue stock."""
 
     def has_permission(self, request, view) -> bool:
         return _has_role(
-            request, (User.Role.RESTAURANT_ISSUER, User.Role.UNIT_ISSUER)
+            request,
+            (
+                User.Role.STOREKEEPER,
+                User.Role.RESTAURANT_ISSUER,
+                User.Role.UNIT_ISSUER,
+            ),
         )
 
 

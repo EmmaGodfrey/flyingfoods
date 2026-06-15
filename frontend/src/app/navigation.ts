@@ -35,16 +35,17 @@ const ALL: Role[] = [
   "ADMIN",
 ];
 
+// Least-privilege: each role sees only the sections it operates. ADMIN sees all.
 export const NAV_SECTIONS: NavSection[] = [
-  { key: "kitchen", label: "Kitchen", path: "/kitchen", icon: ChefHat, roles: ["CHEF", "STOREKEEPER", "MANAGER", "ADMIN"] },
-  { key: "waiter", label: "Service", path: "/waiter", icon: ConciergeBell, roles: ["WAITER", "MANAGER", "ADMIN"] },
-  { key: "stock", label: "Stock", path: "/stock", icon: Boxes, roles: ["STOREKEEPER", "MANAGER", "RESTAURANT_ISSUER", "UNIT_ISSUER", "RECEIVING_OFFICER", "ADMIN"] },
-  { key: "issues", label: "Issues & Transfers", path: "/issues", icon: ClipboardList, roles: ["RESTAURANT_ISSUER", "UNIT_ISSUER", "STOREKEEPER", "MANAGER", "ADMIN"] },
+  { key: "kitchen", label: "Kitchen", path: "/kitchen", icon: ChefHat, roles: ["CHEF", "ADMIN"] },
+  { key: "waiter", label: "Service", path: "/waiter", icon: ConciergeBell, roles: ["WAITER", "ADMIN"] },
+  { key: "stock", label: "Stock", path: "/stock", icon: Boxes, roles: ["STOREKEEPER", "RECEIVING_OFFICER", "UNIT_ISSUER", "RESTAURANT_ISSUER", "MANAGER", "ADMIN"] },
+  { key: "issues", label: "Issues & Transfers", path: "/issues", icon: ClipboardList, roles: ["STOREKEEPER", "UNIT_ISSUER", "RESTAURANT_ISSUER", "ADMIN"] },
   { key: "procurement", label: "Procurement", path: "/procurement", icon: ShoppingCart, roles: ["RECEIVING_OFFICER", "MANAGER", "ADMIN"] },
-  { key: "wastage", label: "Wastage", path: "/wastage", icon: Trash2, roles: ["CHEF", "STOREKEEPER", "MANAGER", "ADMIN"] },
-  { key: "menu", label: "Menu & Recipes", path: "/menu", icon: PackageSearch, roles: ["ADMIN", "MANAGER"] },
+  { key: "wastage", label: "Wastage", path: "/wastage", icon: Trash2, roles: ["CHEF", "STOREKEEPER", "ADMIN"] },
+  { key: "menu", label: "Menu & Recipes", path: "/menu", icon: PackageSearch, roles: ["MANAGER", "ADMIN"] },
   { key: "approvals", label: "Approvals", path: "/approvals", icon: FileText, roles: ["MANAGER", "ADMIN"] },
-  { key: "reports", label: "Reports", path: "/reports", icon: BarChart3, roles: ["MANAGER", "ADMIN", "STOREKEEPER", "RECEIVING_OFFICER"] },
+  { key: "reports", label: "Reports", path: "/reports", icon: BarChart3, roles: ["MANAGER", "ADMIN"] },
   { key: "admin", label: "Administration", path: "/admin", icon: Settings, roles: ["ADMIN"] },
 ];
 
