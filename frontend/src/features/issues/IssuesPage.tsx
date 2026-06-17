@@ -55,10 +55,13 @@ export function IssuesPage(): JSX.Element {
 function LineRows({
   lines,
   products,
+  available,
   onChange,
 }: {
   lines: DraftLine[];
   products: { id: string; name: string; code: string }[];
+  /** product id → quantity on hand at the chosen source, when a source is set. */
+  available?: Record<string, number>;
   onChange: (lines: DraftLine[]) => void;
 }): JSX.Element {
   const update = (index: number, patch: Partial<DraftLine>): void =>
@@ -67,28 +70,42 @@ function LineRows({
 
   return (
     <div className="form-grid">
-      {lines.map((line, index) => (
-        <div className="form-row" key={index} style={{ gridTemplateColumns: "2fr 1fr auto", alignItems: "end" }}>
-          <label className="field">
-            <span>Product</span>
-            <select value={line.product} onChange={(e) => update(index, { product: e.target.value })}>
-              <option value="">Select…</option>
-              {products.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} ({p.code})
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="field">
-            <span>Qty</span>
-            <input type="number" min={0} value={line.qty} onChange={(e) => update(index, { qty: e.target.value })} />
-          </label>
-          <button className="btn btn-ghost" disabled={lines.length === 1} onClick={() => remove(index)}>
-            <Trash2 size={15} />
-          </button>
-        </div>
-      ))}
+      {lines.map((line, index) => {
+        const avail = available && line.product ? available[line.product] ?? 0 : undefined;
+        const over = avail !== undefined && Number(line.qty) > avail;
+        return (
+          <div key={index}>
+            <div className="form-row" style={{ gridTemplateColumns: "2fr 1fr auto", alignItems: "end" }}>
+              <label className="field">
+                <span>Product</span>
+                <select value={line.product} onChange={(e) => update(index, { product: e.target.value })}>
+                  <option value="">Select…</option>
+                  {products.map((p) => {
+                    const a = available ? available[p.id] ?? 0 : undefined;
+                    return (
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({p.code}){a !== undefined ? ` — ${a} on hand` : ""}
+                      </option>
+                    );
+                  })}
+                </select>
+              </label>
+              <label className="field">
+                <span>Qty</span>
+                <input type="number" min={0} value={line.qty} onChange={(e) => update(index, { qty: e.target.value })} />
+              </label>
+              <button className="btn btn-ghost" disabled={lines.length === 1} onClick={() => remove(index)}>
+                <Trash2 size={15} />
+              </button>
+            </div>
+            {over && (
+              <div style={{ color: "var(--danger, #d22)", fontSize: 12, marginTop: 4 }}>
+                Only {avail} on hand at the source — this won't post.
+              </div>
+            )}
+          </div>
+        );
+      })}
       <button className="btn btn-ghost" onClick={() => onChange([...lines, { ...emptyLine }])}>
         <Plus size={15} /> Add line
       </button>
@@ -100,6 +117,20 @@ function toLines(lines: DraftLine[]): MovementLine[] {
   return lines
     .filter((line) => line.product && Number(line.qty) > 0)
     .map((line) => ({ product: line.product, qty: Number(line.qty) }));
+}
+
+/** Turn a post failure into a message that tells the user what to fix. */
+function postErrorMessage(error: unknown, kind: "issue" | "transfer"): string {
+  if (error instanceof ApiError) {
+    if (error.code === "INSUFFICIENT_STOCK") {
+      return "Not enough stock at the source — posting this would take a balance negative.";
+    }
+    if (error.code === "OFF_SCHEDULE_REASON_REQUIRED") {
+      return "Issues to the Unit outside Tue/Thu need an off-schedule reason.";
+    }
+    return error.message || `Could not post ${kind}.`;
+  }
+  return `Could not post ${kind}.`;
 }
 
 type DocLines = IssueDoc["lines"];
@@ -174,6 +205,12 @@ function IssuesTab(): JSX.Element {
     queryFn: () => issuesApi.reasonCodes("ISSUE_DAY"),
     staleTime: 60 * 60 * 1000,
   });
+  const { data: sourceStock = [] } = useQuery({
+    queryKey: ["stock-balances", source],
+    queryFn: () => stockApi.balances({ location: source }),
+    enabled: !!source,
+  });
+  const available = Object.fromEntries(sourceStock.map((b) => [b.product, Number(b.qty_on_hand)]));
 
   const destinationIsUnit = locations.find((l: Location) => l.id === destination)?.kind === "UNIT";
 
@@ -202,7 +239,7 @@ function IssuesTab(): JSX.Element {
       void qc.invalidateQueries({ queryKey: ["stock"] });
       toast.success("Issue posted");
     },
-    onError: (error) => toast.error(error instanceof ApiError ? error.message : "Could not post issue"),
+    onError: (error) => toast.error(postErrorMessage(error, "issue")),
   });
 
   const canManage = canIssue(useAuthStore((s) => s.user?.role));
@@ -265,7 +302,7 @@ function IssuesTab(): JSX.Element {
             </label>
           )}
 
-          <LineRows lines={lines} products={products} onChange={setLines} />
+          <LineRows lines={lines} products={products} available={source ? available : undefined} onChange={setLines} />
         </div>
 
         <div className="dialog-actions">
@@ -302,6 +339,12 @@ function TransfersTab(): JSX.Element {
   const { data: docs = [], isLoading } = useQuery({ queryKey: ["transfers", "list"], queryFn: issuesApi.listTransfers });
   const { data: locations = [] } = useQuery({ queryKey: ["locations"], queryFn: stockApi.locations, staleTime: 60 * 60 * 1000 });
   const { data: products = [] } = useQuery({ queryKey: ["products"], queryFn: issuesApi.products, staleTime: 60 * 60 * 1000 });
+  const { data: sourceStock = [] } = useQuery({
+    queryKey: ["stock-balances", source],
+    queryFn: () => stockApi.balances({ location: source }),
+    enabled: !!source,
+  });
+  const available = Object.fromEntries(sourceStock.map((b) => [b.product, Number(b.qty_on_hand)]));
 
   const transferable = locations.filter((l: Location) => l.kind === "KITCHEN" || l.kind === "UNIT");
 
@@ -329,7 +372,7 @@ function TransfersTab(): JSX.Element {
       void qc.invalidateQueries({ queryKey: ["stock"] });
       toast.success("Transfer posted");
     },
-    onError: (error) => toast.error(error instanceof ApiError ? error.message : "Could not post transfer"),
+    onError: (error) => toast.error(postErrorMessage(error, "transfer")),
   });
 
   const canManage = canIssue(useAuthStore((s) => s.user?.role));
@@ -378,7 +421,7 @@ function TransfersTab(): JSX.Element {
             </label>
           </div>
 
-          <LineRows lines={lines} products={products} onChange={setLines} />
+          <LineRows lines={lines} products={products} available={source ? available : undefined} onChange={setLines} />
         </div>
 
         <div className="dialog-actions">
