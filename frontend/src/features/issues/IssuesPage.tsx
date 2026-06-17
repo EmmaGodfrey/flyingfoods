@@ -5,6 +5,8 @@ import { toast } from "sonner";
 
 import { ApiError } from "../../lib/apiClient";
 import { Column, DataTable, Dialog, PageHeader, StatusBadge } from "../../components/ui";
+import { canIssue } from "../../app/permissions";
+import { useAuthStore } from "../../store/authStore";
 import { stockApi, type Location } from "../stock/api";
 import {
   issuesApi,
@@ -122,12 +124,14 @@ function DocTable({
   empty,
   onPost,
   posting,
+  canManage,
 }: {
   rows: IssueDoc[];
   loading: boolean;
   empty: string;
   onPost: (id: string) => void;
   posting: boolean;
+  canManage: boolean;
 }): JSX.Element {
   const columns: Column<IssueDoc>[] = [
     { header: "Source", cell: (r) => <span className="muted">{r.source_name ?? r.source}</span> },
@@ -140,7 +144,12 @@ function DocTable({
       align: "right",
       cell: (r) =>
         r.status === "POSTED" ? null : (
-          <button className="btn btn-success" disabled={posting} onClick={() => onPost(r.id)}>
+          <button
+            className="btn btn-success"
+            disabled={posting || !canManage}
+            title={canManage ? undefined : "Only storekeepers and issuers can post"}
+            onClick={() => onPost(r.id)}
+          >
             <Send size={15} /> Post
           </button>
         ),
@@ -196,18 +205,24 @@ function IssuesTab(): JSX.Element {
     onError: (error) => toast.error(error instanceof ApiError ? error.message : "Could not post issue"),
   });
 
+  const canManage = canIssue(useAuthStore((s) => s.user?.role));
   const canSubmit = source && destination && toLines(lines).length > 0;
 
   return (
     <div>
       <div className="toolbar">
         <div className="grow" />
-        <button className="btn btn-primary" onClick={() => setOpen(true)}>
+        <button
+          className="btn btn-primary"
+          disabled={!canManage}
+          title={canManage ? undefined : "Only storekeepers and issuers can create issues"}
+          onClick={() => setOpen(true)}
+        >
           <Plus size={16} /> New issue
         </button>
       </div>
 
-      <DocTable rows={docs} loading={isLoading} empty="No issues yet." onPost={(id) => post.mutate(id)} posting={post.isPending} />
+      <DocTable rows={docs} loading={isLoading} empty="No issues yet." onPost={(id) => post.mutate(id)} posting={post.isPending} canManage={canManage} />
 
       <Dialog open={open} onClose={() => setOpen(false)} title="New issue">
         <div className="form-grid">
@@ -317,18 +332,24 @@ function TransfersTab(): JSX.Element {
     onError: (error) => toast.error(error instanceof ApiError ? error.message : "Could not post transfer"),
   });
 
+  const canManage = canIssue(useAuthStore((s) => s.user?.role));
   const canSubmit = source && destination && source !== destination && toLines(lines).length > 0;
 
   return (
     <div>
       <div className="toolbar">
         <div className="grow" />
-        <button className="btn btn-primary" onClick={() => setOpen(true)}>
+        <button
+          className="btn btn-primary"
+          disabled={!canManage}
+          title={canManage ? undefined : "Only storekeepers and issuers can create transfers"}
+          onClick={() => setOpen(true)}
+        >
           <Plus size={16} /> New transfer
         </button>
       </div>
 
-      <DocTable rows={docs} loading={isLoading} empty="No transfers yet." onPost={(id) => post.mutate(id)} posting={post.isPending} />
+      <DocTable rows={docs} loading={isLoading} empty="No transfers yet." onPost={(id) => post.mutate(id)} posting={post.isPending} canManage={canManage} />
 
       <Dialog open={open} onClose={() => setOpen(false)} title="New transfer">
         <div className="form-grid">

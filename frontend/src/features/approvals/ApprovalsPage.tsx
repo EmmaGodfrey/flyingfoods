@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { api, ApiError } from "../../lib/apiClient";
 import type { Paginated } from "../../types";
 import { Column, DataTable, Dialog, PageHeader, StatusBadge } from "../../components/ui";
+import { canApprove } from "../../app/permissions";
+import { useAuthStore } from "../../store/authStore";
 
 interface Approval {
   id: string;
@@ -41,6 +43,7 @@ const approvalsApi = {
 /** Manager approval queue: budgets, wastage, transfers, overrides in one place. */
 export function ApprovalsPage(): JSX.Element {
   const qc = useQueryClient();
+  const mayApprove = canApprove(useAuthStore((s) => s.user?.role));
   const [rejecting, setRejecting] = useState<Approval | null>(null);
   const [viewing, setViewing] = useState<Approval | null>(null);
   const [reason, setReason] = useState("");
@@ -85,15 +88,19 @@ export function ApprovalsPage(): JSX.Element {
           <button className="btn btn-ghost" onClick={() => setViewing(r)}>
             <Eye size={15} /> Details
           </button>
-          <button className="btn btn-ghost" onClick={() => decide.mutate({ id: r.id, action: "investigate", reason: "" })}>
-            <Search size={15} /> Investigate
-          </button>
-          <button className="btn btn-ghost" onClick={() => setRejecting(r)}>
-            <X size={15} /> Reject
-          </button>
-          <button className="btn btn-success" onClick={() => decide.mutate({ id: r.id, action: "approve", reason: "" })}>
-            <Check size={15} /> Approve
-          </button>
+          {mayApprove && (
+            <>
+              <button className="btn btn-ghost" onClick={() => decide.mutate({ id: r.id, action: "investigate", reason: "" })}>
+                <Search size={15} /> Investigate
+              </button>
+              <button className="btn btn-ghost" onClick={() => setRejecting(r)}>
+                <X size={15} /> Reject
+              </button>
+              <button className="btn btn-success" onClick={() => decide.mutate({ id: r.id, action: "approve", reason: "" })}>
+                <Check size={15} /> Approve
+              </button>
+            </>
+          )}
         </div>
       ),
     },
@@ -134,7 +141,7 @@ export function ApprovalsPage(): JSX.Element {
         )}
         <div className="dialog-actions">
           <button className="btn btn-ghost" onClick={() => setViewing(null)}>Close</button>
-          {viewing && (
+          {viewing && mayApprove && (
             <>
               <button className="btn btn-danger" onClick={() => { setRejecting(viewing); setViewing(null); }}>Reject…</button>
               <button className="btn btn-success" onClick={() => { decide.mutate({ id: viewing.id, action: "approve", reason: "" }); setViewing(null); }}>Approve</button>
