@@ -119,18 +119,19 @@ function toLines(lines: DraftLine[]): MovementLine[] {
     .map((line) => ({ product: line.product, qty: Number(line.qty) }));
 }
 
-/** Turn a post failure into a message that tells the user what to fix. */
+/** Turn a post failure into a message that tells the user what to fix.
+ *
+ * Duck-types the error code rather than using `instanceof ApiError`, which can
+ * fail across Vite hot-reload module boundaries. */
 function postErrorMessage(error: unknown, kind: "issue" | "transfer"): string {
-  if (error instanceof ApiError) {
-    if (error.code === "INSUFFICIENT_STOCK") {
-      return "Not enough stock at the source — posting this would take a balance negative.";
-    }
-    if (error.code === "OFF_SCHEDULE_REASON_REQUIRED") {
-      return "Issues to the Unit outside Tue/Thu need an off-schedule reason.";
-    }
-    return error.message || `Could not post ${kind}.`;
+  const e = error as { code?: string; message?: string } | null;
+  if (e?.code === "INSUFFICIENT_STOCK") {
+    return "Not enough stock at the source — posting this would take a balance negative.";
   }
-  return `Could not post ${kind}.`;
+  if (e?.code === "OFF_SCHEDULE_REASON_REQUIRED") {
+    return "Issues to the Unit outside Tue/Thu need an off-schedule reason.";
+  }
+  return e?.message || `Could not post ${kind}.`;
 }
 
 type DocLines = IssueDoc["lines"];
