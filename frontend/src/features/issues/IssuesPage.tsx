@@ -126,7 +126,7 @@ function toLines(lines: DraftLine[]): MovementLine[] {
 function postErrorMessage(error: unknown, kind: "issue" | "transfer"): string {
   const e = error as { code?: string; message?: string } | null;
   if (e?.code === "INSUFFICIENT_STOCK") {
-    return "Not enough stock at the source — posting this would take a balance negative.";
+    return "Insufficient stock";
   }
   if (e?.code === "OFF_SCHEDULE_REASON_REQUIRED") {
     return "Issues to the Unit outside Tue/Thu need an off-schedule reason.";
