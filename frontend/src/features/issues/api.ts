@@ -7,6 +7,13 @@ export interface MovementLine {
   qty: number;
 }
 
+export interface IssueLine {
+  id: string;
+  product: string;
+  product_name?: string;
+  qty: string;
+}
+
 export interface IssueDoc {
   id: string;
   source: string;
@@ -15,6 +22,7 @@ export interface IssueDoc {
   destination_name?: string;
   status: string;
   off_schedule_reason?: string | null;
+  lines?: IssueLine[];
   created_at: string;
 }
 

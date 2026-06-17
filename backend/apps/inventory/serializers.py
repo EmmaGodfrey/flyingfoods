@@ -66,9 +66,11 @@ class StockMovementSerializer(serializers.ModelSerializer):
 class IssueNoteLineSerializer(serializers.ModelSerializer):
     """Single line on an issue note."""
 
+    product_name = serializers.CharField(source="product.name", read_only=True)
+
     class Meta:
         model = IssueNoteLine
-        fields = ["id", "product", "qty"]
+        fields = ["id", "product", "product_name", "qty"]
 
 
 class IssueNoteSerializer(serializers.ModelSerializer):
@@ -122,9 +124,11 @@ class IssueNoteCreateSerializer(serializers.Serializer):
 class TransferLineSerializer(serializers.ModelSerializer):
     """Single line on a transfer."""
 
+    product_name = serializers.CharField(source="product.name", read_only=True)
+
     class Meta:
         model = TransferLine
-        fields = ["id", "product", "qty"]
+        fields = ["id", "product", "product_name", "qty"]
 
 
 class TransferSerializer(serializers.ModelSerializer):

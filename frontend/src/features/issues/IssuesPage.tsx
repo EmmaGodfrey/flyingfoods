@@ -100,6 +100,18 @@ function toLines(lines: DraftLine[]): MovementLine[] {
     .map((line) => ({ product: line.product, qty: Number(line.qty) }));
 }
 
+/** "Beef patty ×20, Burger bun ×5 +1 more" — a compact line summary. */
+function summariseLines(lines?: IssueDoc["lines"]): string {
+  if (!lines || lines.length === 0) return "—";
+  const fmt = (l: NonNullable<IssueDoc["lines"]>[number]): string => {
+    const qty = String(l.qty).replace(/\.?0+$/, "");
+    return `${l.product_name ?? l.product.slice(0, 8)} ×${qty}`;
+  };
+  const shown = lines.slice(0, 2).map(fmt).join(", ");
+  const extra = lines.length > 2 ? ` +${lines.length - 2} more` : "";
+  return shown + extra;
+}
+
 function DocTable({
   rows,
   loading,
@@ -116,6 +128,7 @@ function DocTable({
   const columns: Column<IssueDoc>[] = [
     { header: "Source", cell: (r) => <span className="muted">{r.source_name ?? r.source}</span> },
     { header: "Destination", cell: (r) => <span className="strong">{r.destination_name ?? r.destination}</span> },
+    { header: "Items", cell: (r) => <span>{summariseLines(r.lines)}</span> },
     { header: "Status", cell: (r) => <StatusBadge status={r.status} /> },
     {
       header: "",
