@@ -4,6 +4,7 @@ from datetime import timedelta
 from pathlib import Path
 
 import dj_database_url
+from corsheaders.defaults import default_headers as default_cors_headers
 from decouple import Csv, config
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -136,6 +137,9 @@ CORS_ALLOWED_ORIGINS = config(
     "CORS_ALLOWED_ORIGINS", default="http://localhost:5173", cast=Csv()
 )
 CORS_ALLOW_CREDENTIALS = True
+# Allow the custom idempotency header the client sends on stock-posting calls;
+# without it the browser's CORS preflight blocks the request.
+CORS_ALLOW_HEADERS = (*default_cors_headers, "idempotency-key")
 
 CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = REDIS_URL
