@@ -129,5 +129,5 @@ jobs:
           ssh "$DEV_SSH_USER@$DEV_SSH_HOST" \
             "cd '$DEV_DEPLOY_PATH' &&
              test -f .env.dev &&
-             docker compose -f docker-compose.deploy.yml up -d --build --remove-orphans &&
-             docker compose -f docker-compose.deploy.yml ps"
+             docker compose --env-file .env.dev -f docker-compose.deploy.yml up -d --build --remove-orphans &&
+             docker compose --env-file .env.dev -f docker-compose.deploy.yml ps"

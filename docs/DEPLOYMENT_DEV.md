@@ -98,14 +98,14 @@ On the server:
 
 ```bash
 cd /home/emmanuel/apps/flyingfoods-dev
-docker compose -f docker-compose.deploy.yml ps
-docker compose -f docker-compose.deploy.yml logs -f --tail=200
+docker compose --env-file .env.dev -f docker-compose.deploy.yml ps
+docker compose --env-file .env.dev -f docker-compose.deploy.yml logs -f --tail=200
 ```
 
 To seed demonstration users once:
 
 ```bash
-docker compose -f docker-compose.deploy.yml exec backend python manage.py seed_demo
+docker compose --env-file .env.dev -f docker-compose.deploy.yml exec backend python manage.py seed_demo
 ```
 
 Database and media data live in named Docker volumes and are not deleted by
