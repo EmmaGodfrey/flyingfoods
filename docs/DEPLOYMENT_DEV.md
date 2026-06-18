@@ -8,7 +8,7 @@ deploys one Docker Compose instance to the development server.
 - Server: `178.104.123.31`
 - SSH user: `emmanuel`
 - Suggested path: `/home/emmanuel/apps/flyingfoods-dev`
-- Application URL: `http://178.104.123.31`
+- Application URL: `http://178.104.123.31:8080`
 
 ## 1. Prepare the server once
 
@@ -33,6 +33,9 @@ Copy `.env.dev.example` to `.env.dev` and replace every placeholder. The
 PostgreSQL password in `POSTGRES_PASSWORD` and `DATABASE_URL` must match.
 Keep `DJANGO_COOKIE_SECURE=False` only while this development instance is
 served over plain HTTP. Set it to `True` when HTTPS is configured.
+
+The development instance uses port `8080` because the server's existing Nginx
+service already owns port `80`.
 
 Do not commit `.env.dev`; the workflow deliberately preserves the server copy
 during each upload.
