@@ -60,3 +60,6 @@ outstanding business requirements.
 
 Development-server CI/CD setup is documented in
 [docs/DEPLOYMENT_DEV.md](docs/DEPLOYMENT_DEV.md).
+
+Team domain ownership and issue workflow are documented in
+[docs/TEAM_OWNERSHIP.md](docs/TEAM_OWNERSHIP.md).
