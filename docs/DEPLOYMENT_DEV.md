@@ -76,9 +76,10 @@ In GitHub, create the `development` environment and add:
 The private key must include its `BEGIN OPENSSH PRIVATE KEY` and `END OPENSSH
 PRIVATE KEY` lines.
 
-Add an environment variable named `DEV_DEPLOY_ENABLED` with value `true` only
-after the server, `.env.dev`, SSH key, and secrets are ready. Until then, CI
-still runs on `dev`, but the deployment job is safely skipped.
+Under repository **Settings → Secrets and variables → Actions → Variables**,
+add `DEV_DEPLOY_ENABLED` with value `true` only after the server, `.env.dev`,
+SSH key, and environment secrets are ready. Until then, CI still runs on
+`dev`, but the deployment job is safely skipped.
 
 ## 4. First deployment
 
