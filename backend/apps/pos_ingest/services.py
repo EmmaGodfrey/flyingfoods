@@ -16,6 +16,7 @@ from apps.kitchen.realtime import broadcast_order_event
 from apps.masterdata.models import Location
 from apps.menu.models import MenuItem, RecipeVersion
 from apps.notifications.services import notify_role
+from apps.notifications.models import Notification
 from apps.pos_ingest.models import ReplayLog, SaleEvent
 from apps.users.models import User
 
@@ -116,7 +117,7 @@ def ingest_sale_event(payload: dict) -> SaleEvent:
         event.save(update_fields=["status", "updated_at"])
         notify_role(
             User.Role.ADMIN,
-            kind="INSUFFICIENT_STOCK",
+            kind=Notification.Kind.UNKNOWN_MENU_ITEM,
             body=f"Sale {pos_sale_id} references an unknown menu item or unpublished recipe.",
             subject=event,
         )

@@ -38,6 +38,12 @@ class PurchaseBudget(BaseModel):
         verbose_name = "Purchase Budget"
         verbose_name_plural = "Purchase Budgets"
         ordering = ["-created_at"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(total_estimated__gte=0),
+                name="budget_total_nonnegative",
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"Budget({self.id}, {self.status})"
@@ -77,6 +83,20 @@ class BudgetLine(BaseModel):
     class Meta:
         verbose_name = "Budget Line"
         verbose_name_plural = "Budget Lines"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["budget", "product"],
+                name="unique_product_per_budget",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(qty__gt=0),
+                name="budget_line_qty_positive",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(est_unit_cost__gte=0),
+                name="budget_cost_nonnegative",
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"BudgetLine({self.budget_id}, {self.product_id}, qty={self.qty})"
@@ -129,6 +149,24 @@ class POLine(BaseModel):
     class Meta:
         verbose_name = "PO Line"
         verbose_name_plural = "PO Lines"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["po", "product"],
+                name="unique_product_per_po",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(qty__gt=0),
+                name="po_line_qty_positive",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(unit_price__gte=0),
+                name="po_price_nonnegative",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(fulfilled_qty__gte=0),
+                name="po_fulfilled_nonnegative",
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"POLine({self.po_id}, {self.product_id}, qty={self.qty})"
@@ -208,6 +246,20 @@ class GRNLine(BaseModel):
     class Meta:
         verbose_name = "GRN Line"
         verbose_name_plural = "GRN Lines"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["grn", "po_line"],
+                name="unique_po_line_per_grn",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(qty_received__gt=0),
+                name="grn_qty_positive",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(unit_cost__gte=0),
+                name="grn_cost_nonnegative",
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"GRNLine({self.grn_id}, {self.po_line_id}, qty={self.qty_received})"
@@ -226,6 +278,16 @@ class SupplierInvoice(BaseModel):
         verbose_name = "Supplier Invoice"
         verbose_name_plural = "Supplier Invoices"
         ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["supplier", "invoice_ref"],
+                name="unique_supplier_invoice_ref",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(amount__gte=0),
+                name="invoice_amount_nonnegative",
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"Invoice({self.invoice_ref}, {self.supplier_id})"

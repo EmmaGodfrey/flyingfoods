@@ -86,6 +86,19 @@ def test_publish_retires_previous_version(stocked_product):
     assert v1.effective_to == datetime.date(2026, 1, 1)
 
 
+def test_future_version_does_not_hide_current_recipe(stocked_product):
+    """A future publication keeps the current effective recipe resolvable."""
+    item = MenuItem.objects.create(name="Burger", pos_code="BURGER")
+    v1 = create_recipe_version(menu_item=item, lines=[(stocked_product.pk, Decimal("2"))])
+    publish_version(version=v1, effective_from=datetime.date(2020, 1, 1))
+    v2 = create_recipe_version(menu_item=item, lines=[(stocked_product.pk, Decimal("3"))])
+    publish_version(version=v2, effective_from=datetime.date(2030, 1, 1))
+
+    active = RecipeVersion.active_for(item.pk, datetime.date(2026, 6, 18))
+
+    assert active == v1
+
+
 def test_delete_guarded_when_history_exists(stocked_product, locations):
     """A menu item with order history cannot be hard-deleted."""
     item = MenuItem.objects.create(name="Burger", pos_code="BURGER")

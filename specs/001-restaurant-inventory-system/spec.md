@@ -8,7 +8,10 @@
 
 **Input**: User description: "Rebuild the existing ERP as a restaurant & inventory management system satisfying the Flying Foods BRD v2.0 (kitchen fulfillment, waiter service, multi-location inventory, procurement with budgets and 3-way match, wastage, versioned menus/recipes, POS ingestion, Pastel accounting sync) plus approved quality enhancements (immutable stock ledger, document-driven postings, leakage reporting, unit-of-measure conversions, generic approval engine, transactional outbox for integrations, recipe costing, reorder suggestions)."
 
-**Source requirements**: Flying Foods BRD v2.0 (`erp/Restaurant_Inventory_BRD.pdf`, text extraction `erp/temp_brd.txt`). BRD requirement IDs (FR-PI, FR-PA, FR-KD, FR-SV, FR-PR, FR-IS, FR-WA, FR-MR, FR-AD, FR-RP) are cross-referenced throughout.
+**Source requirements**: Flying Foods BRD v2.0
+(`docs/Restaurant_Inventory_BRD.pdf`). BRD requirement IDs (FR-PI, FR-PA,
+FR-KD, FR-SV, FR-PR, FR-IS, FR-WA, FR-MR, FR-AD, FR-RP) are
+cross-referenced throughout.
 
 ## User Scenarios & Testing *(mandatory)*
 

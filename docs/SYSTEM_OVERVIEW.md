@@ -20,7 +20,10 @@ The full requirements live in `docs/Restaurant_Inventory_BRD.pdf` (BRD v2.0). Re
 
 ## Why a rebuild
 
-The repo contained a FastAPI + SQLAlchemy ERP (~4.7k lines) covering generic inventory and procurement. A gap analysis against the BRD scored it at 15-20% coverage: no kitchen workflow, no recipes, no multi-location stock, no budgets, no Pastel sync. Since 80% had to be built new and the target stack is Django, we decided (2026-06-12) to build fresh in Django + DRF and keep the old code in `legacy/` as a read-only reference. The React/Vite frontend survives and gets extended.
+The previous FastAPI + SQLAlchemy prototype covered generic inventory and
+procurement but not the core BRD workflows. The active system was rebuilt in
+Django + DRF around kitchen service, versioned recipes, multi-location stock,
+procurement controls, and accounting synchronisation.
 
 ## Stack
 
@@ -41,7 +44,6 @@ The repo contained a FastAPI + SQLAlchemy ERP (~4.7k lines) covering generic inv
 ```
 backend/    Django project. config/ holds settings; apps/ holds one app per domain.
 frontend/   React SPA. One folder per feature under src/features/.
-legacy/     The old FastAPI ERP. Reference only. Never import from it. CI ignores it.
 specs/      Spec-kit artifacts: the contract for what we build (see below).
 docs/       This guide, the BRD, decision records.
 ```
@@ -97,7 +99,9 @@ The spec artifacts under `specs/001-restaurant-inventory-system/` are the workin
 
 - **Spec-driven**: features flow spec → plan → tasks → implement. Use the `/speckit-*` commands rather than editing artifacts ad hoc.
 - **Git**: `main` stays deployable; work happens on `dev` and short-lived `feature/xxx` branches. Conventional commits (`feat:`, `fix:`, `test:` ...), one change per commit.
-- **Code style**: the project style guide (CLAUDE.md) is binding. Highlights: full type hints and docstrings on every Python function, services not fat views, `select_related`/`only()` on hot queries, pagination on every list endpoint, no `any` in TypeScript, React Query for all server data.
+- **Code style**: use full type hints and docstrings on Python functions,
+  services instead of fat views, optimized hot queries, pagination on list
+  endpoints, strict TypeScript, and React Query for server state.
 - **Tests**: every API endpoint test covers happy path, 401, 403, and 400. Critical logic (ledger, approvals, dedupe, outbox) gets service-level tests. Frontend tests target behavior through RTL + MSW, never component internals.
 - **Responses**: every endpoint returns `{"success": true, "data": ...}` or `{"success": false, "error": {"code", "message"}}`. Clients can rely on this without exception.
 

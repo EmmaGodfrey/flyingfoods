@@ -35,6 +35,9 @@ class Location(BaseModel):
         verbose_name = "Location"
         verbose_name_plural = "Locations"
         ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(fields=["kind"], name="unique_location_kind"),
+        ]
 
     def __str__(self) -> str:
         return f"{self.name} ({self.kind})"
@@ -69,6 +72,20 @@ class Product(BaseModel):
         ordering = ["name"]
         indexes = [
             models.Index(fields=["category", "is_active"], name="product_cat_active_idx"),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(purchase_to_stock_factor__gt=0),
+                name="product_purchase_factor_positive",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(recipe_to_stock_factor__gt=0),
+                name="product_recipe_factor_positive",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(reorder_level__gte=0),
+                name="product_reorder_nonnegative",
+            ),
         ]
 
     def __str__(self) -> str:

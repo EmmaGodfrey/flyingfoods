@@ -1,10 +1,13 @@
 """Procurement write services: budget submission, PO creation, GRN posting, invoice matching."""
 
+import uuid
 from decimal import Decimal
 from typing import Any, Optional
 
 from django.core.files.base import ContentFile
 from django.db import transaction
+from django.utils import timezone
+from rest_framework.exceptions import ValidationError
 
 from apps.core.exceptions import DomainError
 from apps.core.models import Approval
@@ -83,9 +86,19 @@ def create_po(
     """
     if budget.status != PurchaseBudget.Status.APPROVED:
         raise DomainError("Purchase orders can only be created against APPROVED budgets.")
+    if not lines:
+        raise ValidationError({"lines": "At least one PO line is required."})
 
-    count = PurchaseOrder.objects.count()
-    po_number = f"PO-{count + 1:06d}"
+    budget_products = set(
+        budget.lines.values_list("product_id", flat=True)
+    )
+    requested_products = [line["product_id"] for line in lines]
+    if len(requested_products) != len(set(requested_products)):
+        raise ValidationError({"lines": "A product may appear only once on a PO."})
+    if not set(requested_products).issubset(budget_products):
+        raise ValidationError({"lines": "Every PO product must belong to the approved budget."})
+
+    po_number = f"PO-{timezone.now():%Y%m%d}-{uuid.uuid4().hex[:6].upper()}"
 
     po = PurchaseOrder.objects.create(
         budget=budget,
@@ -129,13 +142,12 @@ def send_po(po: PurchaseOrder, user: User) -> POSendLog:
 
     try:
         import weasyprint  # type: ignore[import]
+    except ImportError:
+        weasyprint = None
 
+    if weasyprint is not None:
         html_content = _build_po_html(po)
         pdf_bytes = weasyprint.HTML(string=html_content).write_pdf()
-    except ImportError:
-        pass
-    except Exception:
-        pass
 
     supplier = po.supplier
 
@@ -153,7 +165,7 @@ def send_po(po: PurchaseOrder, user: User) -> POSendLog:
             msg.attach(f"{po.po_number}.pdf", pdf_bytes, "application/pdf")
             po.pdf_file.save(f"{po.po_number}.pdf", ContentFile(pdf_bytes), save=False)
 
-        msg.send(fail_silently=True)
+        msg.send(fail_silently=False)
 
         po.status = PurchaseOrder.Status.SENT
         po.save(update_fields=["status", "pdf_file", "updated_at"])
@@ -232,6 +244,20 @@ def post_grn(
     Returns:
         The posted GRN.
     """
+    if not lines_data:
+        raise ValidationError({"lines": "At least one GRN line is required."})
+
+    po_line_ids = set(po.lines.values_list("id", flat=True))
+    submitted_line_ids = [item["po_line_id"] for item in lines_data]
+    if len(submitted_line_ids) != len(set(submitted_line_ids)):
+        raise ValidationError({"lines": "A PO line may appear only once on a GRN."})
+    if not set(submitted_line_ids).issubset(po_line_ids):
+        raise ValidationError({"lines": "Every GRN line must belong to the selected PO."})
+
+    stores_location = Location.objects.filter(kind=Location.Kind.STORES).first()
+    if stores_location is None:
+        raise DomainError("Restaurant Stores location is not configured.")
+
     grn = GRN.objects.create(po=po, received_by=received_by, status=GRN.Status.DRAFT)
 
     grn_lines: list[GRNLine] = []
@@ -248,29 +274,25 @@ def post_grn(
         )
     GRNLine.objects.bulk_create(grn_lines)
 
-    stores_location = Location.objects.filter(kind=Location.Kind.STORES).first()
-
     movement_lines: list[MovementLine] = []
     for item in lines_data:
-        if stores_location:
-            po_line = POLine.objects.get(pk=item["po_line_id"])
-            movement_lines.append(
-                MovementLine(
-                    product_id=po_line.product_id,
-                    location_id=stores_location.pk,
-                    qty_delta=Decimal(str(item["qty_received"])),
-                    movement_type=StockMovement.MovementType.GRN_RECEIPT,
-                    unit_cost=Decimal(str(item["unit_cost"])),
-                )
+        po_line = POLine.objects.get(pk=item["po_line_id"])
+        movement_lines.append(
+            MovementLine(
+                product_id=po_line.product_id,
+                location_id=stores_location.pk,
+                qty_delta=Decimal(str(item["qty_received"])),
+                movement_type=StockMovement.MovementType.GRN_RECEIPT,
+                unit_cost=Decimal(str(item["unit_cost"])),
             )
-
-    if movement_lines:
-        post_movements(
-            document_type="GRN",
-            document_id=grn.pk,
-            lines=movement_lines,
-            posted_by=received_by,
         )
+
+    post_movements(
+        document_type="GRN",
+        document_id=grn.pk,
+        lines=movement_lines,
+        posted_by=received_by,
+    )
 
     for item in lines_data:
         po_line = POLine.objects.select_for_update().get(pk=item["po_line_id"])

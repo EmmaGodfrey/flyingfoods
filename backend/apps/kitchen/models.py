@@ -51,6 +51,16 @@ class OrderItem(BaseModel):
     class Meta:
         verbose_name = "Order Item"
         verbose_name_plural = "Order Items"
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(qty__gt=0),
+                name="order_item_qty_positive",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(price__isnull=True) | models.Q(price__gte=0),
+                name="order_item_price_nonnegative",
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"{self.pos_code} x {self.qty}"

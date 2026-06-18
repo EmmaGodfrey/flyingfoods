@@ -32,3 +32,8 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+
+# Local AI and specification tooling
+.claude/
+.specify/
+CLAUDE.md

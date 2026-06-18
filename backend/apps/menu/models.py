@@ -62,7 +62,15 @@ class RecipeVersion(BaseModel):
         constraints = [
             models.UniqueConstraint(
                 fields=["menu_item", "version_no"], name="unique_version_per_item"
-            )
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(effective_to__isnull=True)
+                    | models.Q(effective_from__isnull=True)
+                    | models.Q(effective_to__gt=models.F("effective_from"))
+                ),
+                name="recipe_effective_window_valid",
+            ),
         ]
         ordering = ["menu_item", "-version_no"]
 
@@ -93,7 +101,7 @@ class RecipeVersion(BaseModel):
         return (
             cls.objects.filter(
                 menu_item_id=menu_item_id,
-                status=cls.Status.PUBLISHED,
+                status__in=(cls.Status.PUBLISHED, cls.Status.RETIRED),
                 effective_from__lte=on_date,
             )
             .filter(models.Q(effective_to__isnull=True) | models.Q(effective_to__gt=on_date))
@@ -117,7 +125,11 @@ class RecipeLine(BaseModel):
         constraints = [
             models.UniqueConstraint(
                 fields=["recipe_version", "product"], name="unique_product_per_version"
-            )
+            ),
+            models.CheckConstraint(
+                condition=models.Q(qty_per_serving__gt=0),
+                name="recipe_line_qty_positive",
+            ),
         ]
 
     def __str__(self) -> str:

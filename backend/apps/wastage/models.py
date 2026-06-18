@@ -42,6 +42,16 @@ class WastageEntry(BaseModel):
             models.Index(fields=["location", "created_at"], name="wastage_loc_created_idx"),
         ]
         ordering = ["-created_at"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(qty__gt=0),
+                name="wastage_qty_positive",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(value__gte=0),
+                name="wastage_value_nonnegative",
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"{self.entry_type} {self.product_id} x {self.qty} ({self.status})"

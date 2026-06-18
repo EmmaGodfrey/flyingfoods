@@ -173,6 +173,8 @@ def create_issue_note(
     """Create a draft issue note, enforcing the Unit Tue/Thu schedule warning."""
     if not lines:
         raise ValidationError({"lines": "At least one line is required."})
+    if source.pk == destination.pk:
+        raise ValidationError({"destination": "Source and destination must differ."})
     if destination.kind == Location.Kind.UNIT:
         today = datetime.date.today()
         if today.weekday() not in UNIT_ISSUE_DAYS and off_schedule_reason_id is None:
@@ -291,15 +293,21 @@ def post_transfer(
 def open_stock_take(*, location: Location, started_by: Any) -> StockTake:
     """Open a count, freezing system quantities for every active product."""
     stock_take = StockTake.objects.create(location=location, started_by=started_by)
-    balances = StockBalance.objects.filter(location=location).select_related(None)
+    balances = {
+        row["product_id"]: row["qty_on_hand"]
+        for row in StockBalance.objects.filter(location=location).values(
+            "product_id", "qty_on_hand"
+        )
+    }
+    products = Product.objects.filter(is_active=True).values_list("id", flat=True)
     StockTakeLine.objects.bulk_create(
         [
             StockTakeLine(
                 stock_take=stock_take,
-                product_id=balance.product_id,
-                system_qty=balance.qty_on_hand,
+                product_id=product_id,
+                system_qty=balances.get(product_id, Decimal("0")),
             )
-            for balance in balances
+            for product_id in products
         ]
     )
     return stock_take

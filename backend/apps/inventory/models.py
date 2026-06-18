@@ -55,6 +55,12 @@ class StockMovement(BaseModel):
             ),
             models.Index(fields=["document_type", "document_id"], name="ledger_document_idx"),
         ]
+        constraints = [
+            models.CheckConstraint(
+                condition=~models.Q(qty_delta=0),
+                name="stock_movement_qty_nonzero",
+            ),
+        ]
         ordering = ["-posted_at"]
 
     def __str__(self) -> str:
@@ -107,6 +113,12 @@ class IssueNote(BaseModel):
         verbose_name = "Issue Note"
         verbose_name_plural = "Issue Notes"
         ordering = ["-created_at"]
+        constraints = [
+            models.CheckConstraint(
+                condition=~models.Q(source=models.F("destination")),
+                name="issue_locations_differ",
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"Issue {self.source_id} → {self.destination_id} ({self.status})"
@@ -122,6 +134,16 @@ class IssueNoteLine(BaseModel):
     class Meta:
         verbose_name = "Issue Note Line"
         verbose_name_plural = "Issue Note Lines"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["issue_note", "product"],
+                name="unique_product_per_issue",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(qty__gt=0),
+                name="issue_line_qty_positive",
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"{self.product_id} x {self.qty}"
@@ -148,6 +170,16 @@ class Transfer(BaseModel):
         verbose_name = "Transfer"
         verbose_name_plural = "Transfers"
         ordering = ["-created_at"]
+        constraints = [
+            models.CheckConstraint(
+                condition=~models.Q(source=models.F("destination")),
+                name="transfer_locations_differ",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(total_value__gte=0),
+                name="transfer_value_nonnegative",
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"Transfer {self.source_id} → {self.destination_id} ({self.status})"
@@ -174,6 +206,16 @@ class TransferLine(BaseModel):
     class Meta:
         verbose_name = "Transfer Line"
         verbose_name_plural = "Transfer Lines"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["transfer", "product"],
+                name="unique_product_per_transfer",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(qty__gt=0),
+                name="transfer_line_qty_positive",
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"{self.product_id} x {self.qty}"
@@ -226,7 +268,15 @@ class StockTakeLine(BaseModel):
         constraints = [
             models.UniqueConstraint(
                 fields=["stock_take", "product"], name="unique_product_per_stocktake"
-            )
+            ),
+            models.CheckConstraint(
+                condition=models.Q(counted_qty__isnull=True) | models.Q(counted_qty__gte=0),
+                name="stocktake_count_nonnegative",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(value__gte=0),
+                name="stocktake_value_nonnegative",
+            ),
         ]
 
     def __str__(self) -> str:

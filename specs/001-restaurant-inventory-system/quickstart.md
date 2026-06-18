@@ -82,4 +82,5 @@ cd frontend && npm run build         # bundle check
 
 ## CI
 
-`.github/workflows/ci.yml` runs backend pytest (postgres+redis services) and frontend test+build on every push to `dev`/`main`. `legacy/` is excluded from both jobs.
+`.github/workflows/ci.yml` runs backend pytest (PostgreSQL and Redis services)
+and frontend build checks on every push to `dev`/`main`.

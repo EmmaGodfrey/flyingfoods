@@ -24,6 +24,7 @@ class Notification(BaseModel):
         ORDER_RETURNED = "ORDER_RETURNED", "Order Returned"
         APPROVAL_PENDING = "APPROVAL_PENDING", "Approval Pending"
         INSUFFICIENT_STOCK = "INSUFFICIENT_STOCK", "Insufficient Stock"
+        UNKNOWN_MENU_ITEM = "UNKNOWN_MENU_ITEM", "Unknown Menu Item"
 
     recipient = models.ForeignKey(
         settings.AUTH_USER_MODEL,

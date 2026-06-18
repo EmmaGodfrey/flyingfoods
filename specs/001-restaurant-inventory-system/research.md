@@ -6,7 +6,8 @@
 
 ### 1. Backend rebuild in Django vs port of FastAPI code
 
-- **Decision**: Fresh Django 5 + DRF project; FastAPI code kept in `legacy/` as reference only.
+- **Decision**: Fresh Django 5 + DRF project. The superseded FastAPI
+  prototype was removed once the replacement workflows were established.
 - **Rationale**: ~80% of BRD functionality does not exist in the old code; porting ~4.7k lines of async SQLAlchemy buys the remaining ~20% at high translation cost, then fights Django idioms forever. Greenfield with the old code as a behavioral reference is faster and yields one consistent codebase. User approved 2026-06-12.
 - **Alternatives considered**: (a) port models/services first then extend — rejected: double work, mixed idioms; (b) keep FastAPI — rejected: violates the Django requirement.
 
@@ -68,5 +69,8 @@
 
 ### 12. Test strategy
 
-- **Decision**: pytest-django + factory_boy; per-app `tests/` with `test_views` (APIClient: happy/401/403/400), `test_services` (posting, approvals, outbox), factories module. Frontend: Vitest + RTL + MSW for new features. CI: GitHub Actions, backend job + frontend job, `legacy/` excluded.
+- **Decision**: pytest-django + factory_boy; per-app `tests/` with `test_views`
+  (APIClient: happy/401/403/400), `test_services` (posting, approvals, outbox),
+  and factories. Frontend: Vitest + RTL + MSW for new features. CI: GitHub
+  Actions with separate backend and frontend jobs.
 - **Rationale**: Style guide testing section verbatim; critical-path focus (ledger, approvals, ingestion dedupe, outbox) per "test the right things".

@@ -59,6 +59,10 @@ class ThresholdConfig(BaseModel):
         verbose_name = "Threshold Configuration"
         verbose_name_plural = "Threshold Configurations"
         constraints = [
+            models.CheckConstraint(
+                condition=models.Q(amount__gte=0),
+                name="threshold_amount_nonnegative",
+            ),
             models.UniqueConstraint(
                 fields=["scope"],
                 condition=models.Q(is_active=True),

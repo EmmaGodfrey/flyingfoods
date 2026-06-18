@@ -115,3 +115,13 @@ def test_stock_take_posts_variance(product, locations, make_user):
 
     post_stock_take(stock_take=take, posted_by=keeper)
     assert on_hand(product.pk, locations["stores"].pk) == Decimal("95")
+
+
+def test_stock_take_includes_active_products_without_balance(product, locations, make_user):
+    """The count sheet includes active zero-balance products."""
+    keeper = make_user("STOREKEEPER")
+
+    take = open_stock_take(location=locations["stores"], started_by=keeper)
+
+    line = take.lines.get(product=product)
+    assert line.system_qty == Decimal("0")

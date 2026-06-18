@@ -6,7 +6,13 @@
 
 ## Summary
 
-Rebuild the existing FastAPI ERP as a fresh Django + DRF backend satisfying the Flying Foods BRD v2.0: POS sale ingestion → Kitchen Display with recipe-driven stock deduction → Waiter service; three-location inventory on an append-only stock ledger; Budget → PO (PDF + email) → GRN → 3-way match procurement; wastage/stock-take with threshold approvals; versioned menus/recipes; Pastel sync via transactional outbox; full reporting with PDF/Excel export. The existing React/Vite frontend is kept and extended. Old FastAPI code becomes read-only reference in `legacy/`.
+Rebuild the existing ERP as a fresh Django + DRF backend satisfying the Flying
+Foods BRD v2.0: POS sale ingestion → Kitchen Display with recipe-driven stock
+deduction → Waiter service; three-location inventory on an append-only stock
+ledger; Budget → PO (PDF + email) → GRN → 3-way match procurement;
+wastage/stock-take with threshold approvals; versioned menus/recipes; Pastel
+sync via transactional outbox; full reporting with PDF/Excel export. The
+superseded FastAPI prototype was removed after the replacement was established.
 
 ## Technical Context
 
@@ -32,7 +38,9 @@ Rebuild the existing FastAPI ERP as a fresh Django + DRF backend satisfying the 
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-`.specify/memory/constitution.md` is the unmodified template (no project principles ratified yet). No gates to evaluate. Governing conventions instead come from the project style guide (`c:\Users\user\Downloads\CLAUDE.md`): explicit + fully typed code, services-not-fat-views, UUID PKs, consistent `{success, data|error}` response shape, pagination everywhere, pytest-django/factory_boy testing, conventional commits. The plan below conforms to all of these. **PASS.**
+Governing conventions are explicit and fully typed code, services-not-fat-views,
+UUID primary keys, a consistent `{success, data|error}` response shape,
+pagination, pytest-django testing, and conventional commits.
 
 ## Project Structure
 
@@ -100,14 +108,14 @@ erp_v2/
 │   │   └── ...existing pages/router until migrated into features/
 │   ├── .env.example
 │   └── Dockerfile
-├── legacy/                           # OLD erp/ FastAPI code — reference only, excluded from CI
 ├── specs/                            # spec-kit artifacts
 ├── docs/                             # team documentation, ADRs, BRD
 ├── docker-compose.yml                # postgres, redis, mailpit, backend, frontend
 └── .github/workflows/ci.yml         # backend pytest + frontend build/test
 ```
 
-**Structure Decision**: Web-application monorepo (`backend/` + `frontend/`), Django apps mapped one-to-one to BRD modules. The old tree at `erp/` is relocated to `legacy/` in the restructure task; nothing imports from it.
+**Structure Decision**: Web-application monorepo (`backend/` + `frontend/`),
+Django apps mapped one-to-one to BRD modules.
 
 ## Architecture Decisions (binding for tasks)
 
@@ -128,7 +136,7 @@ erp_v2/
 
 | Phase | Contents | Spec stories |
 |---|---|---|
-| 0 Restructure | monorepo move (`legacy/`, `frontend/`), docker-compose, CI skeleton | — |
+| 0 Restructure | monorepo layout, docker-compose, CI skeleton | — |
 | 1 Foundation | config, core app (envelope, BaseModel, audit, thresholds, reason codes, approvals, outbox shells), users + JWT + permissions, masterdata + UoM, locations, seed command | US8 |
 | 2 Kitchen flow | menu/recipes (minimal publish), pos_ingest, inventory ledger + post_movements, kitchen orders + Channels, waiter view | US1 |
 | 3 Procurement | budgets + approvals, PO + PDF + email (mailpit), GRN + partials, invoice 3-way match | US2 |

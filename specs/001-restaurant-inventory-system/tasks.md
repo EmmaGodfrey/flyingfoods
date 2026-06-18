@@ -9,11 +9,13 @@
 
 ## Phase 1: Setup (monorepo restructure + scaffolding)
 
-- [ ] T001 Restructure monorepo: move `erp/erp/` → `legacy/backend-fastapi/`, `erp/erp-web/` → `frontend/`, BRD + docs → `docs/`; delete committed venvs (`erp/.venv`, `erp/erp/.venv`); add root `.gitignore` per style guide
+- [x] T001 Restructure monorepo into `backend/`, `frontend/`, `docs/`, and
+  `specs/`; remove the superseded implementation and committed environments.
 - [ ] T002 Init git repo on `main`, create `dev` branch, initial commit of restructured tree
 - [ ] T003 Scaffold Django project in `backend/`: `config/settings/{base,dev,prod}.py` (decouple + dj-database-url), `config/{urls,asgi,wsgi,celery}.py`, `manage.py`, `pyproject.toml` with deps from plan.md, `backend/.env.example`
 - [ ] T004 [P] Write root `docker-compose.yml` (postgres:16, redis:7, mailpit, backend, frontend) and `backend/Dockerfile` (python:3.12-slim + weasyprint system libs)
-- [ ] T005 [P] Write `.github/workflows/ci.yml`: backend pytest job (postgres+redis services), frontend test+build job; `legacy/` excluded
+- [x] T005 [P] Write `.github/workflows/ci.yml`: backend pytest job
+  (PostgreSQL + Redis services) and frontend build job.
 - [ ] T006 [P] Configure pytest-django in `backend/pyproject.toml` and shared `backend/conftest.py` (api_client, role-user fixtures via factory_boy)
 
 ## Phase 2: Foundational (blocks all stories)
