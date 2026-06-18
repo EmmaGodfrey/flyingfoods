@@ -13,6 +13,7 @@ if SECRET_KEY == "dev-insecure-secret-change-me":  # noqa: F405
     raise RuntimeError("DJANGO_SECRET_KEY must be set in production.")
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
+COOKIE_SECURE = config("DJANGO_COOKIE_SECURE", default=True, cast=bool)
+SESSION_COOKIE_SECURE = COOKIE_SECURE
+CSRF_COOKIE_SECURE = COOKIE_SECURE
 SECURE_HSTS_SECONDS = 60 * 60 * 24 * 30

@@ -20,6 +20,7 @@ from apps.core.views import (
     ApprovalInvestigateView,
     ApprovalListView,
     ApprovalRejectView,
+    HealthView,
     IntegrationHealthView,
     IntegrationSettingsListView,
     ReasonCodeDetailView,
@@ -29,6 +30,7 @@ from apps.core.views import (
 )
 
 urlpatterns = [
+    path("health/", HealthView.as_view(), name="health"),
     # Reason codes
     path("reason-codes/", ReasonCodeListCreateView.as_view(), name="reason-code-list"),
     path("reason-codes/<uuid:pk>/", ReasonCodeDetailView.as_view(), name="reason-code-detail"),

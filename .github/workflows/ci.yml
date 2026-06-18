@@ -78,3 +78,56 @@ jobs:
       - name: Build
         working-directory: frontend
         run: npm run build
+
+  deploy-dev:
+    name: Deploy dev
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/dev' &&
+      vars.DEV_DEPLOY_ENABLED == 'true'
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    environment: development
+    concurrency:
+      group: flyingfoods-development
+      cancel-in-progress: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure deployment SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.DEV_SSH_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Upload release
+        env:
+          DEV_SSH_HOST: ${{ secrets.DEV_SSH_HOST }}
+          DEV_SSH_USER: ${{ secrets.DEV_SSH_USER }}
+          DEV_DEPLOY_PATH: ${{ secrets.DEV_DEPLOY_PATH }}
+        run: |
+          ssh "$DEV_SSH_USER@$DEV_SSH_HOST" "mkdir -p '$DEV_DEPLOY_PATH'"
+          rsync -az --delete \
+            --exclude '.git/' \
+            --exclude '.env.dev' \
+            --exclude '.claude/' \
+            --exclude '.specify/' \
+            ./ "$DEV_SSH_USER@$DEV_SSH_HOST:$DEV_DEPLOY_PATH/"
+
+      - name: Rebuild and restart development instance
+        env:
+          DEV_SSH_HOST: ${{ secrets.DEV_SSH_HOST }}
+          DEV_SSH_USER: ${{ secrets.DEV_SSH_USER }}
+          DEV_DEPLOY_PATH: ${{ secrets.DEV_DEPLOY_PATH }}
+        run: |
+          ssh "$DEV_SSH_USER@$DEV_SSH_HOST" \
+            "cd '$DEV_DEPLOY_PATH' &&
+             test -f .env.dev &&
+             docker compose -f docker-compose.deploy.yml up -d --build --remove-orphans &&
+             docker compose -f docker-compose.deploy.yml ps"

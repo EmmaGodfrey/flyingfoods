@@ -7,7 +7,7 @@ import uuid
 from typing import Any
 
 from rest_framework import generics, status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -22,6 +22,17 @@ from apps.core.serializers import (
 )
 from apps.core.services import decide_approval
 from apps.users.permissions import IsAdmin, IsManager
+
+
+class HealthView(APIView):
+    """Unauthenticated liveness endpoint for containers and load balancers."""
+
+    authentication_classes: list = []
+    permission_classes = [AllowAny]
+
+    def get(self, request: Request) -> Response:
+        """Confirm that the Django application is serving requests."""
+        return Response({"status": "ok"})
 
 
 # ---------------------------------------------------------------------------

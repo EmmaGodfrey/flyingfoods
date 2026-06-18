@@ -57,3 +57,6 @@ npm run build
 
 See [docs/BRD_COMPLIANCE.md](docs/BRD_COMPLIANCE.md) for implemented and
 outstanding business requirements.
+
+Development-server CI/CD setup is documented in
+[docs/DEPLOYMENT_DEV.md](docs/DEPLOYMENT_DEV.md).
