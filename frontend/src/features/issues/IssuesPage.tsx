@@ -4,6 +4,7 @@ import { Plus, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { ApiError } from "../../lib/apiClient";
+import { randomUuid } from "../../lib/id";
 import { Column, DataTable, Dialog, PageHeader, StatusBadge } from "../../components/ui";
 import { canIssue } from "../../app/permissions";
 import { useAuthStore } from "../../store/authStore";
@@ -234,7 +235,7 @@ function IssuesTab(): JSX.Element {
   });
 
   const post = useMutation({
-    mutationFn: (id: string) => issuesApi.postIssue(id, crypto.randomUUID()),
+    mutationFn: (id: string) => issuesApi.postIssue(id, randomUuid()),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["issues"] });
       void qc.invalidateQueries({ queryKey: ["stock"] });
@@ -367,7 +368,7 @@ function TransfersTab(): JSX.Element {
   });
 
   const post = useMutation({
-    mutationFn: (id: string) => issuesApi.postTransfer(id, crypto.randomUUID()),
+    mutationFn: (id: string) => issuesApi.postTransfer(id, randomUuid()),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["transfers"] });
       void qc.invalidateQueries({ queryKey: ["stock"] });

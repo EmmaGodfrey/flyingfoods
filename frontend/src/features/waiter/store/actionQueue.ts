@@ -10,6 +10,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+import { randomUuid } from "../../../lib/id";
+
 export type PendingAction =
   | { id: string; kind: "served"; orderId: string }
   | { id: string; kind: "return"; orderId: string; reasonCode: string };
@@ -33,5 +35,5 @@ export const useActionQueue = create<QueueState>()(
 
 /** Crypto-strong idempotency key for an enqueued action. */
 export function newActionId(): string {
-  return crypto.randomUUID();
+  return randomUuid();
 }
